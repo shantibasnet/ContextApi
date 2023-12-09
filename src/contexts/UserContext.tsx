@@ -1,43 +1,80 @@
-import { createContext, Dispatch, ReactNode, SetStateAction, useState } from "react";
+// UserContext.tsx
+import React, { createContext, useReducer, Dispatch, ReactNode, SetStateAction } from "react";
 
 export type IUser = {
   name: string;
   email: string;
-  login:boolean
+  login: boolean;
 };
 
 export interface IUserContext {
   user: IUser;
-  setUser: Dispatch<SetStateAction<IUser>>;
+  dispatch: Dispatch<UserAction>;
+  login: () => void;
+  logout: () => void; // Add logout function
 }
 
-const defaultState: IUserContext = {
-  user: {
-    name: '',
-    email: '',
-    login: true
-  },
-  setUser: (user: IUser) => {},
-}as IUserContext
+export const UserActionTypes = {
+  SET_USER: 'SET_USER',
+  LOGOUT: 'LOGOUT',
+} as const;
 
-export const UserContext = createContext(defaultState);
+export type UserAction =
+  | { type: typeof UserActionTypes.SET_USER; payload: IUser }
+  | { type: typeof UserActionTypes.LOGOUT }
+  
+
+const userReducer = (state: IUser, action: UserAction): IUser => {
+  switch (action.type) {
+    case UserActionTypes.SET_USER:
+      return { ...state, ...action.payload };
+    case UserActionTypes.LOGOUT:
+      return { name: '', email: '', login: false };
+    default:
+      return state;
+  }
+};
+
+const defaultUserState: IUser = {
+  name: '',
+  email: '',
+  login: false,
+};
+
+export const UserContext = createContext<IUserContext | undefined>(undefined);
 
 type IUserProvider = {
   children: ReactNode;
 };
 
 export default function UserProvider({ children }: IUserProvider) {
-  const [user, setUser] = useState<IUser>({
-    name: '',
-    email: '',
-    login: true,
-  });
+  const [user, dispatch] = useReducer(userReducer, defaultUserState);
+
+  const setUser = (user: IUser) => {
+    dispatch({ type: UserActionTypes.SET_USER, payload: user });
+  };
+
+  const login = () => {
+    setUser({
+      name: 'Shanti',
+      email: 'Sha@example.com',
+      login: true,
+    });
+  };
+  const logout = () => {
+    dispatch({ type: UserActionTypes.LOGOUT });
+  };
+
+  const contextValue: IUserContext = {
+    user,
+    dispatch,
+    login,
+    logout, 
+  };
 
   return (
-    <>
-      <UserContext.Provider value={{ user, setUser }}>
-        {children}
-      </UserContext.Provider>
-    </>
+    <UserContext.Provider value={contextValue}>
+      {children}
+    </UserContext.Provider>
   );
 }
